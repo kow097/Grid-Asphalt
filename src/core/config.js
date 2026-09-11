@@ -1,0 +1,8 @@
+export const CONFIG = {
+  TILE_SIZE: 24,
+  CAMERA_ZOOM_MIN: 0.4,
+  CAMERA_ZOOM_MAX: 3,
+  WORLD_WIDTH: 120,
+  WORLD_HEIGHT: 80,
+  WORLD_SEED: 42,
+};
