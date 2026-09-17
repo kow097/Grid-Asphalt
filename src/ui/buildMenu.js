@@ -99,6 +99,17 @@ function sideCell(anchorX, anchorY, w, h, side) {
 
 let entityIdCounter = 0;
 
+// Koristi saveLoad.js nakon ucitavanja spremljene igre - sprjecava da nova
+// zgrada dobije ID koji se poklapa s nekim vec ucitanim entitetom (brojac
+// je modul-scope pa inace ne resetira izmedju Load i sljedece gradnje).
+export function setEntityIdCounter(value) {
+  entityIdCounter = value;
+}
+
+export function getEntityIdCounter() {
+  return entityIdCounter;
+}
+
 export const BUILD_MODES = {
   EXTRACTOR: 'extractor',
   SMELTER: 'smelter',

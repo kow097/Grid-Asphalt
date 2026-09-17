@@ -8,6 +8,13 @@ export const QUEST_STATE = {
 
 let questIdCounter = 0;
 
+// Koristi saveLoad.js nakon ucitavanja - sprjecava sudar ID-a kad
+// QuestManager nakon Load-a ponudi novi quest (isti razlog kao
+// setEntityIdCounter u buildMenu.js).
+export function setQuestIdCounter(value) {
+  questIdCounter = value;
+}
+
 export class Quest {
   constructor({ portId, requirements, rewardMoney, rewardRP, acceptWindow, executionWindow }) {
     this.id = questIdCounter++;

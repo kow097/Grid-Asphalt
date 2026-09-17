@@ -1,5 +1,5 @@
 export class PauseMenu {
-  constructor(container, loop, onExit, onSettings) {
+  constructor(container, loop, onExit, onSettings, onSaveLoad) {
     this.container = container;
     this.loop = loop;
     this.visible = false;
@@ -9,13 +9,14 @@ export class PauseMenu {
         <h2>Paused</h2>
         <button id="resume-btn">Resume</button>
         <button id="settings-btn">Settings</button>
-        <button id="saveload-btn" disabled>Save / Load</button>
+        <button id="saveload-btn">Save / Load</button>
         <button id="exit-btn">Exit</button>
       </div>
     `;
 
     this.container.querySelector('#resume-btn').addEventListener('click', () => this.close());
     this.container.querySelector('#settings-btn').addEventListener('click', () => onSettings?.());
+    this.container.querySelector('#saveload-btn').addEventListener('click', () => onSaveLoad?.());
     this.container.querySelector('#exit-btn').addEventListener('click', onExit);
   }
 

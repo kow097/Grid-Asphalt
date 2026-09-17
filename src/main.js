@@ -1,4 +1,5 @@
 import { Engine } from './core/engine.js';
+import { hasQuickSave, loadQuickSave, readSaveFile } from './state/saveLoad.js';
 
 const homeScreen = document.getElementById('home-screen');
 const gameRoot = document.getElementById('game-root');
@@ -8,6 +9,9 @@ const islandLabel = document.getElementById('island-count-label');
 const islandInput = document.getElementById('island-count-input');
 const portInput = document.getElementById('port-count-input');
 const seedInput = document.getElementById('seed-input');
+const loadGameBtn = document.getElementById('load-game-btn');
+const loadFileBtn = document.getElementById('load-file-btn');
+const loadFileInput = document.getElementById('load-file-input');
 
 let currentEngine = null;
 
@@ -16,7 +20,48 @@ function exitToHome() {
   currentEngine = null;
   gameRoot.classList.add('hidden');
   homeScreen.classList.remove('hidden');
+  loadGameBtn.disabled = !hasQuickSave();
 }
+
+// Pokrece Engine vec ucitan spremljenim podacima - koristi ga i "Load Game"
+// s home screena i Quick Load / Import unutar SaveLoadMenu tijekom igre
+// (potonji dolazi preko engine.onLoadGame callbacka, ne direktnim pozivom).
+function startFromSaveData(saveData) {
+  if (currentEngine) currentEngine.destroy();
+
+  homeScreen.classList.add('hidden');
+  gameRoot.classList.remove('hidden');
+
+  const canvas = document.getElementById('game-canvas');
+  const { width, height, islandCount, portCount, seed } = saveData.world;
+  currentEngine = new Engine(canvas, {
+    worldWidth: width, worldHeight: height, islandCount, portCount, seed,
+    onExit: exitToHome, onLoadGame: startFromSaveData,
+  });
+  currentEngine.applySaveData(saveData);
+  window.engine = currentEngine;
+  currentEngine.start();
+}
+
+loadGameBtn.disabled = !hasQuickSave();
+loadGameBtn.addEventListener('click', () => {
+  const data = loadQuickSave();
+  if (data) startFromSaveData(data);
+});
+
+loadFileBtn.addEventListener('click', () => loadFileInput.click());
+loadFileInput.addEventListener('change', async () => {
+  const file = loadFileInput.files[0];
+  if (!file) return;
+  try {
+    const data = await readSaveFile(file);
+    startFromSaveData(data);
+  } catch (err) {
+    alert('Datoteka nije valjan save.');
+  } finally {
+    loadFileInput.value = '';
+  }
+});
 
 const MAX_PORTS_BY_SIZE = {
   '120x80': 2,
@@ -50,7 +95,10 @@ startBtn.addEventListener('click', () => {
   gameRoot.classList.remove('hidden');
 
   const canvas = document.getElementById('game-canvas');
-  currentEngine = new Engine(canvas, { worldWidth: width, worldHeight: height, islandCount, portCount, seed, onExit: exitToHome });
+  currentEngine = new Engine(canvas, {
+    worldWidth: width, worldHeight: height, islandCount, portCount, seed,
+    onExit: exitToHome, onLoadGame: startFromSaveData,
+  });
   // Izlozeno na window radi debugiranja iz browser konzole (npr.
   // window.engine.selectedTruck.heading) - ne koristi se nigdje u samoj igri.
   window.engine = currentEngine;

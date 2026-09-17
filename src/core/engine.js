@@ -36,6 +36,8 @@ import { Minimap } from '../ui/minimap.js';
 import { EventTicker } from '../ui/eventTicker.js';
 import { MobileControls } from '../ui/mobileControls.js';
 import { SettingsPanel } from '../ui/settingsPanel.js';
+import { SaveLoadMenu } from '../ui/saveLoadMenu.js';
+import { applySaveData } from '../state/saveLoad.js';
 
 export class Engine {
   constructor(canvas, options = {}) {
@@ -57,6 +59,11 @@ export class Engine {
     const islandCount = options.islandCount ?? 1;
     const portCount = options.portCount ?? 1;
     const seed = options.seed ?? CONFIG.WORLD_SEED;
+    // Cuvamo parametre generacije (koristi ih saveLoad.js kao metapodatke
+    // u save fileu - sama Load logika ne ovisi o njima, world se pri
+    // ucitavanju u potpunosti prepisuje spremljenim podacima).
+    this.worldOptions = { worldWidth, worldHeight, islandCount, portCount, seed };
+    this.onLoadGame = options.onLoadGame ?? null;
 
     const generator = new IslandGenerator(seed, worldWidth, worldHeight, islandCount);
     const world = generator.generate(portCount);
@@ -123,9 +130,11 @@ export class Engine {
     this.loop = new GameLoop(this._update.bind(this), this._render.bind(this));
     this.timePanel = new TimePanel(document.getElementById('time-panel'), this.loop);
     this.settingsPanel = new SettingsPanel(document.getElementById('settings-panel'));
+    this.saveLoadMenu = new SaveLoadMenu(document.getElementById('saveload-panel'), this);
     this.pauseMenu = new PauseMenu(
       document.getElementById('pause-menu'), this.loop, options.onExit ?? (() => {}),
-      () => { this.pauseMenu.close(); this.settingsPanel.toggle(); }
+      () => { this.pauseMenu.close(); this.settingsPanel.toggle(); },
+      () => { this.pauseMenu.close(); this.saveLoadMenu.open(); }
     );
     this.recipePanel = new RecipePanel(document.getElementById('recipe-panel'));
     this.warehouseMenu = new WarehouseMenu(document.getElementById('warehouse-menu'));
@@ -185,6 +194,8 @@ export class Engine {
       this.availableQuestsPopup.close();
     } else if (this.settingsPanel.visible) {
       this.settingsPanel.close();
+    } else if (this.saveLoadMenu.visible) {
+      this.saveLoadMenu.close();
     } else if (this.minimap.visible) {
       this.minimap.close();
     } else if (this.sellTruckArmed) {
@@ -801,6 +812,14 @@ export class Engine {
   // zove PRIJE nego stvori novi Engine na Exit->Start Again - bez toga stari
   // Engine ostaje "zombie" koji i dalje reagira na tipke/resize/touch iako
   // ga nitko vise ne koristi (isti canvas/DOM elementi se recikliraju).
+  // Prepisuje trenutno stanje (world, entiteti, wallet, tech tree, kamera...)
+  // spremljenim podacima. Poziva se na tek konstruiranom Engineu (main.js
+  // gradi Engine s dimenzijama iz save.world pa odmah zove ovo) - world.tiles
+  // je vec ispravne velicine, applySaveData ga u potpunosti prepisuje.
+  applySaveData(saveData) {
+    applySaveData(this, saveData);
+  }
+
   destroy() {
     this.loop.stop();
     window.removeEventListener('resize', this._onResize);
