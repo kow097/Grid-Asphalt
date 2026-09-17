@@ -38,6 +38,7 @@ import { MobileControls } from '../ui/mobileControls.js';
 import { SettingsPanel } from '../ui/settingsPanel.js';
 import { SaveLoadMenu } from '../ui/saveLoadMenu.js';
 import { applySaveData } from '../state/saveLoad.js';
+import { updatePowerNetworks } from '../power/powerNetwork.js';
 
 export class Engine {
   constructor(canvas, options = {}) {
@@ -74,6 +75,11 @@ export class Engine {
 
     this.state = new GameState(world, wallet, questManager);
     this.market = new Market(wallet, this.state.modifiers);
+    questManager.modifiers = this.state.modifiers;
+
+    this.techTree = new TechTree();
+    this._techCtx = { modifiers: this.state.modifiers, questManager, state: this.state, techTree: this.techTree };
+    this.techTree.autoUnlockFreeRoots(this._techCtx);
 
     this.truckIdCounter = 0;
     this.conveyorIdCounter = 0;
@@ -90,7 +96,7 @@ export class Engine {
     this.routeArmed = false;
     this.sellTruckArmed = false;
 
-    this.buildController = new BuildController(this.state);
+    this.buildController = new BuildController(this.state, this.techTree);
     this._wireBuildInput();
     this._wireHover();
 
@@ -121,7 +127,6 @@ export class Engine {
 
     this.tooltip = new Tooltip(document.getElementById('tooltip'));
 
-    this.techTree = new TechTree();
     this.techPanel = new TechPanel(document.getElementById('tech-panel'), this.techTree, questManager, this.state.modifiers, this.state);
 
     this.assets = new AssetRegistry();
@@ -282,8 +287,9 @@ export class Engine {
 
   _buyTruck() {
     if (this.state.truckGarages.length === 0) return;
-    if (this.state.wallet.balance < CONFIG.TRUCK_COST) return;
-    this.state.wallet.spend(CONFIG.TRUCK_COST);
+    const cost = Math.round(CONFIG.TRUCK_COST * (this.state.modifiers.truckCostMultiplier ?? 1));
+    if (this.state.wallet.balance < cost) return;
+    this.state.wallet.spend(cost);
     const garage = this.state.truckGarages[0];
     const capacity = 50 + this.state.modifiers.truckCapacityBonus;
     const truck = new Truck(`truck-${this.truckIdCounter++}`, garage.x, garage.y, capacity);
@@ -360,7 +366,8 @@ export class Engine {
       this.buildController.mode === BUILD_MODES.ROAD_UPGRADE ||
       this.buildController.mode === BUILD_MODES.BRIDGE ||
       this.buildController.mode === BUILD_MODES.DEMOLISH ||
-      this.buildController.mode === BUILD_MODES.CONVEYOR;
+      this.buildController.mode === BUILD_MODES.CONVEYOR ||
+      this.buildController.mode === BUILD_MODES.POWER_POLE;
 
     this.input.onDragBuild = (sx0, sy0, sx1, sy1) => {
       const w0 = this.camera.screenToWorld(sx0, sy0, CONFIG.TILE_SIZE);
@@ -751,6 +758,8 @@ export class Engine {
         }
       }
     }
+    updatePowerNetworks(this.state);
+    this.techTree.update(this._techCtx);
     for (const extractor of this.state.extractors) extractor.update(deltaTime, modifiers.extractorSpeedMultiplier);
     for (const smelter of this.state.smelters) smelter.update(deltaTime, modifiers.processorSpeedMultiplier);
     for (const factory of this.state.factories) factory.update(deltaTime, modifiers.processorSpeedMultiplier);

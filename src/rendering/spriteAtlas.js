@@ -34,4 +34,7 @@ export const BUILDING_COLORS = {
   factory: '#6b4c9a',
   assembler: '#3a8a6e',
   truck_garage: '#3a5a8a',
+  power_plant: '#e0393e',
+  battery: '#2ecc71',
+  power_pole: '#c9a227',
 };

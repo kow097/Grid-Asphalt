@@ -11,6 +11,9 @@ export class GameState {
     this.warehouses = [];
     this.conveyors = [];
     this.truckGarages = [];
+    this.powerPlants = [];
+    this.batteries = [];
+    this.powerPoles = [];
     this.modifiers = {
       truckCapacityBonus: 0,
       truckSpeedMultiplier: 1,
@@ -23,6 +26,12 @@ export class GameState {
       warehouseCapacityBonus: 0,
       marketPriceMultiplier: 1,
       smartRoutingUnlocked: false,
+      buildCostMultiplier: 1,
+      truckCostMultiplier: 1,
+      questAcceptWindowBonus: 0,
+      researchPointBonusPerQuest: 0,
+      extractorPowerExempt: false,
+      corporateSynergyUnlocked: false,
     };
   }
 }

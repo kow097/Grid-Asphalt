@@ -10,6 +10,9 @@ import { Warehouse } from '../logistics/warehouse.js';
 import { ConveyorSegment } from '../logistics/conveyor.js';
 import { Merger } from '../logistics/merger.js';
 import { TruckGarage } from '../logistics/truckGarage.js';
+import { PowerPlant } from '../production/powerPlant.js';
+import { Battery } from '../logistics/battery.js';
+import { PowerPole } from '../logistics/powerPole.js';
 import { Truck } from '../logistics/truck.js';
 import { Vector2 } from '../utils/vector2.js';
 import { findPath } from '../pathfinding/astar.js';
@@ -136,6 +139,10 @@ export function buildSaveData(engine) {
 
   const truckGarages = state.truckGarages.map((g) => ({ id: g.id, ...footprintOf(g) }));
 
+  const powerPlants = state.powerPlants.map((p) => ({ id: p.id, x: p.x, y: p.y, output: p.output }));
+  const batteries = state.batteries.map((b) => ({ id: b.id, x: b.x, y: b.y, capacity: b.capacity, charge: b.charge }));
+  const powerPoles = state.powerPoles.map((p) => ({ id: p.id, x: p.x, y: p.y }));
+
   const conveyors = state.conveyors.map((c) => ({
     id: c.id, kind: c.kind, x: c.x, y: c.y, direction: c.direction,
     items: c.items, nextId: c.next ? c.next.id : null,
@@ -168,7 +175,11 @@ export function buildSaveData(engine) {
     wallet: state.wallet.balance,
     difficultyId: state.questManager.difficultyConfig?.id ?? 'normal',
     modifiers: { ...state.modifiers },
-    techTree: { purchased: [...techTree.purchased] },
+    techTree: {
+      purchased: [...techTree.purchased],
+      progress: [...techTree.progress.entries()],
+      activeProjectId: techTree.activeProjectId,
+    },
     questManager: {
       offeredQuests: state.questManager.offeredQuests.map(questToJSON),
       activeQuests: state.questManager.activeQuests.map(questToJSON),
@@ -185,6 +196,9 @@ export function buildSaveData(engine) {
       assemblers: state.assemblers.map(processorToJSON),
       warehouses,
       truckGarages,
+      powerPlants,
+      batteries,
+      powerPoles,
       conveyors,
       trucks,
     },
@@ -285,6 +299,24 @@ export function applySaveData(engine, save) {
     return g;
   });
 
+  state.powerPlants = (save.entities.powerPlants ?? []).map((d) => {
+    const p = new PowerPlant(d.id, d.output);
+    p.x = d.x; p.y = d.y;
+    world.tiles[d.y * world.width + d.x].building = p;
+    return p;
+  });
+  state.batteries = (save.entities.batteries ?? []).map((d) => {
+    const b = new Battery(d.id, d.capacity);
+    b.x = d.x; b.y = d.y; b.charge = d.charge;
+    world.tiles[d.y * world.width + d.x].building = b;
+    return b;
+  });
+  state.powerPoles = (save.entities.powerPoles ?? []).map((d) => {
+    const p = new PowerPole(d.id, d.x, d.y);
+    world.tiles[d.y * world.width + d.x].building = p;
+    return p;
+  });
+
   const conveyorById = new Map();
   state.conveyors = save.entities.conveyors.map((d) => {
     const c = d.kind === 'merger'
@@ -332,6 +364,8 @@ export function applySaveData(engine, save) {
 
   Object.assign(state.modifiers, save.modifiers);
   engine.techTree.purchased = new Set(save.techTree.purchased);
+  engine.techTree.progress = new Map(save.techTree.progress ?? []);
+  engine.techTree.activeProjectId = save.techTree.activeProjectId ?? null;
 
   const qm = state.questManager;
   qm.offeredQuests = save.questManager.offeredQuests.map(buildQuest);
@@ -353,7 +387,8 @@ export function applySaveData(engine, save) {
   setEntityIdCounter(
     1 + Math.max(
       maxNum(state.extractors), maxNum(state.smelters), maxNum(state.factories),
-      maxNum(state.assemblers), maxNum(state.warehouses), maxNum(state.truckGarages)
+      maxNum(state.assemblers), maxNum(state.warehouses), maxNum(state.truckGarages),
+      maxNum(state.powerPlants), maxNum(state.batteries), maxNum(state.powerPoles)
     )
   );
   engine.conveyorIdCounter = 1 + maxNum(state.conveyors);

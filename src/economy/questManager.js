@@ -37,9 +37,10 @@ export class QuestManager {
   }
 
   offerQuest(questParams) {
+    const bonus = this.modifiers?.questAcceptWindowBonus ?? 0;
     const quest = new Quest({
       ...questParams,
-      acceptWindow: questParams.acceptWindow ?? this.difficultyConfig.acceptWindowSeconds,
+      acceptWindow: (questParams.acceptWindow ?? this.difficultyConfig.acceptWindowSeconds) + bonus,
       executionWindow: questParams.executionWindow ?? this.difficultyConfig.executionWindowSeconds,
     });
     this.offeredQuests.push(quest);
@@ -87,7 +88,8 @@ export class QuestManager {
     this.wallet.add(quest.rewardMoney * effectiveRatio * rewardMultiplier);
 
     if (ratio >= 1 || rpOnPartial) {
-      this.researchPoints += quest.rewardRP * effectiveRatio * rewardMultiplier;
+      const bonus = this.modifiers?.researchPointBonusPerQuest ?? 0;
+      this.researchPoints += (quest.rewardRP * effectiveRatio * rewardMultiplier) + bonus;
     }
   }
 }
