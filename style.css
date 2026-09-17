@@ -172,10 +172,27 @@ html, body {
 .tech-tab-content {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  overflow: auto;
+}
+
+.tech-root-row {
+  display: flex;
+  justify-content: center;
+}
+
+.tech-root-connector {
+  width: 2px;
+  height: 24px;
+  background: var(--glass-border);
+}
+
+.tech-columns-row {
+  display: flex;
   justify-content: center;
   gap: 48px;
-  padding: 32px 16px;
-  overflow: auto;
 }
 
 .tech-line-col {

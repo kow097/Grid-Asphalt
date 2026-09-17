@@ -1,86 +1,60 @@
-// Tab: MANAGEMENT. line: 'A' Contracts&Quests, 'B' R&D&Market, 'C' Financial&Efficiency.
+// Tab: MANAGEMENT. Root (M1) je sam u tier 1, sve tri linije granaju se iz njega.
+// line: 'A' Contracts & Quests, 'B' R&D & Market, 'C' Financial & Efficiency.
 export const MANAGEMENT_NODES = [
-  // --- Linija A: Contracts & Quests ---
   {
-    id: 'M1', title: 'Local Contracts', line: 'A', tier: 1, cost: 0, prerequisites: [],
-    description: '2 aktivna questa (postojeće stanje). IZUZETAK od "sve se otključava" pravila - zaključavanje OVOGA bi spriječilo igrača da ikad zaradi RP (questovi su jedini izvor RP), pa ostaje besplatan root.',
+    id: 'M1', title: 'Local Contracts', tier: 1, cost: 0, prerequisites: [],
+    description: '2 active quest slots (current baseline). Kept free/auto-unlocked on purpose: quests are the only source of RP, so locking this would make it impossible to ever earn RP.',
     effect: null,
   },
-  {
-    id: 'M2', title: 'Contract Slots II', line: 'A', tier: 2, cost: 250, prerequisites: ['M1'],
-    description: 'Broj aktivnih questova: 3.',
-    effect: (ctx) => { ctx.questManager.maxActiveQuests = 3; },
-  },
-  {
-    id: 'M3', title: 'Contract Slots III', line: 'A', tier: 3, cost: 350, prerequisites: ['M2'],
-    description: 'Broj aktivnih questova: 4.',
-    effect: (ctx) => { ctx.questManager.maxActiveQuests = 4; },
-  },
-  {
-    id: 'M4', title: 'Regional Contracts', line: 'A', tier: 4, cost: 450, prerequisites: ['M3'],
-    description: 'Broj aktivnih questova: 5.',
-    effect: (ctx) => { ctx.questManager.maxActiveQuests = 5; },
-  },
-  {
-    id: 'M5', title: 'Global Monopolies', line: 'A', tier: 5, cost: 600, prerequisites: ['M4'],
-    description: 'Broj aktivnih questova: 6 (maksimum).',
-    effect: (ctx) => { ctx.questManager.maxActiveQuests = 6; },
-  },
 
-  // --- Linija B: R&D & Market ---
-  {
-    id: 'M6', title: 'Research Center', line: 'B', tier: 1, cost: 300, prerequisites: [],
-    description: 'Svaki dovršeni quest daje +3 RP bonus (flat, iznad quest nagrade).',
-    effect: (ctx) => { ctx.modifiers.researchPointBonusPerQuest += 3; },
-  },
-  {
-    id: 'M7', title: 'Market Speculation', line: 'B', tier: 2, cost: 350, prerequisites: ['M6'],
-    description: 'Cijena auto-prodaje (market sell) +15%.',
-    effect: (ctx) => { ctx.modifiers.marketPriceMultiplier *= 1.15; },
-  },
-  {
-    id: 'M8', title: 'Contract Refinement', line: 'B', tier: 3, cost: 300, prerequisites: ['M6'],
-    description: 'Produžuje accept-timer quest ponuda za +30 sekundi.',
-    effect: (ctx) => { ctx.modifiers.questAcceptWindowBonus += 30; },
-  },
-  {
-    id: 'M9', title: 'Auto-Accept Contracts', line: 'B', tier: 4, cost: 400, prerequisites: ['M8'],
-    description: '[Nije još povezano] QuestManager bi trebao pratiti stvarni protok robe u luku i auto-prihvaćati questove - čeka novi sustav (vlastiti tier-limit, odvojen od M1-M5). Čvor je kupljiv, efekt je stub.',
-    effect: null, placeholder: true,
-  },
-  {
-    id: 'M10', title: 'Research Queueing', line: 'B', tier: 5, cost: 0, prerequisites: ['M6'],
-    description: '[Nije još u igri] Red čekanja istraživanja (nizanje projekata). 0RP, niski prioritet.',
-    effect: null, placeholder: true,
-  },
+  // --- Line A: Contracts & Quests ---
+  { id: 'M2', title: 'Contract Slots II', line: 'A', tier: 2, cost: 20, prerequisites: ['M1'],
+    description: 'Active quest slots: 3.', effect: (ctx) => { ctx.questManager.maxActiveQuests = 3; } },
+  { id: 'M3', title: 'Contract Slots III', line: 'A', tier: 3, cost: 45, prerequisites: ['M2'],
+    description: 'Active quest slots: 4.', effect: (ctx) => { ctx.questManager.maxActiveQuests = 4; } },
+  { id: 'M4', title: 'Regional Contracts', line: 'A', tier: 4, cost: 90, prerequisites: ['M3'],
+    description: 'Active quest slots: 5.', effect: (ctx) => { ctx.questManager.maxActiveQuests = 5; } },
+  { id: 'M5', title: 'Global Monopolies', line: 'A', tier: 5, cost: 160, prerequisites: ['M4'],
+    description: 'Active quest slots: 6 (maximum).', effect: (ctx) => { ctx.questManager.maxActiveQuests = 6; } },
+  { id: 'M6', title: 'Priority Contracts', line: 'A', tier: 6, cost: 0, prerequisites: ['M5'],
+    description: '[Not in game yet] A higher-value quest tier. 0RP until the system exists.',
+    effect: null, placeholder: true },
+  { id: 'M7', title: 'Contract Syndicates', line: 'A', tier: 7, cost: 0, prerequisites: ['M6'],
+    description: '[Not in game yet] Multi-port bundled contracts. 0RP until the system exists.',
+    effect: null, placeholder: true },
 
-  // --- Linija C: Financial & Efficiency ---
-  {
-    id: 'M11', title: 'Tax Exemptions', line: 'C', tier: 1, cost: 250, prerequisites: [],
-    description: 'Troškovi gradnje svih zgrada -10%.',
-    effect: (ctx) => { ctx.modifiers.buildCostMultiplier *= 0.9; },
-  },
-  {
-    id: 'M12', title: 'Subsidized Infrastructure', line: 'C', tier: 2, cost: 300, prerequisites: ['M11'],
-    description: 'Trošak polaganja/nadogradnje cesta -15%.',
-    effect: (ctx) => { ctx.modifiers.roadUpgradeCostMultiplier *= 0.85; },
-  },
-  {
-    id: 'M13', title: 'Bulk Purchasing', line: 'C', tier: 3, cost: 350, prerequisites: ['M12'],
-    description: 'Dodatnih -10% na trošak zgrada (kumulativno s M11) i -15% na cijenu kamiona.',
-    effect: (ctx) => {
-      ctx.modifiers.buildCostMultiplier *= 0.9;
-      ctx.modifiers.truckCostMultiplier *= 0.85;
-    },
-  },
-  {
-    id: 'M14', title: 'Emergency Loans', line: 'C', tier: 4, cost: 500, prerequisites: ['M13'],
-    description: '[Nije još povezano] Kredit/dug sustav (posudi novac, otplati s kamatom) - dolazi kasnije, poseban rad. Čvor je kupljiv, efekt je stub.',
-    effect: null, placeholder: true,
-  },
-  {
-    id: 'M15', title: 'Corporate Synergy', line: 'C', tier: 5, cost: 550, prerequisites: ['M13'],
-    description: '[Nije još povezano] Dovršeni quest bi trebao dati privremeni bonus brzine svim tvornicama - čeka timed-buff sustav. Čvor je kupljiv, efekt je stub.',
-    effect: null, placeholder: true,
-  },
+  // --- Line B: R&D & Market ---
+  { id: 'M8', title: 'Research Center', line: 'B', tier: 2, cost: 20, prerequisites: ['M1'],
+    description: 'Each completed quest grants +3 flat bonus RP (on top of its normal reward).', effect: (ctx) => { ctx.modifiers.researchPointBonusPerQuest += 3; } },
+  { id: 'M9', title: 'Market Speculation', line: 'B', tier: 3, cost: 45, prerequisites: ['M8'],
+    description: 'Auto-sell (market) price +15%.', effect: (ctx) => { ctx.modifiers.marketPriceMultiplier *= 1.15; } },
+  { id: 'M10', title: 'Contract Refinement', line: 'B', tier: 4, cost: 90, prerequisites: ['M9'],
+    description: 'Extends the quest accept-offer timer by +30 seconds.', effect: (ctx) => { ctx.modifiers.questAcceptWindowBonus += 30; } },
+  { id: 'M11', title: 'Auto-Accept Contracts', line: 'B', tier: 5, cost: 0, prerequisites: ['M10'],
+    description: '[Not yet wired up] QuestManager should watch actual goods flow into a port and auto-accept matching quests (own tier-limit, separate from Contract Slots). 0RP until connected.',
+    effect: null, placeholder: true },
+  { id: 'M12', title: 'Research Queueing', line: 'B', tier: 6, cost: 0, prerequisites: ['M8'],
+    description: '[Not in game yet] Queue up research projects in advance. 0RP, low priority.',
+    effect: null, placeholder: true },
+  { id: 'M13', title: 'Global Market Analytics', line: 'B', tier: 7, cost: 0, prerequisites: ['M12'],
+    description: '[Not in game yet] Highlights the best-paying ports for each resource. 0RP until the system exists.',
+    effect: null, placeholder: true },
+
+  // --- Line C: Financial & Efficiency ---
+  { id: 'M14', title: 'Tax Exemptions', line: 'C', tier: 2, cost: 20, prerequisites: ['M1'],
+    description: 'All building costs -10%.', effect: (ctx) => { ctx.modifiers.buildCostMultiplier *= 0.9; } },
+  { id: 'M15', title: 'Subsidized Infrastructure', line: 'C', tier: 3, cost: 45, prerequisites: ['M14'],
+    description: 'Road building/upgrade cost -15%.', effect: (ctx) => { ctx.modifiers.roadUpgradeCostMultiplier *= 0.85; } },
+  { id: 'M16', title: 'Bulk Purchasing', line: 'C', tier: 4, cost: 90, prerequisites: ['M15'],
+    description: 'A further -10% on building costs (stacks with Tax Exemptions), and -15% on truck price.',
+    effect: (ctx) => { ctx.modifiers.buildCostMultiplier *= 0.9; ctx.modifiers.truckCostMultiplier *= 0.85; } },
+  { id: 'M17', title: 'Emergency Loans', line: 'C', tier: 5, cost: 0, prerequisites: ['M16'],
+    description: '[Not yet wired up] A loan/debt system (borrow money, repay with interest) - coming in a later session. Purchasable now, effect is a stub.',
+    effect: null, placeholder: true },
+  { id: 'M18', title: 'Corporate Synergy', line: 'C', tier: 6, cost: 0, prerequisites: ['M16'],
+    description: '[Not yet wired up] A completed quest should grant a temporary speed bonus to all factories - waiting on a timed-buff system. Purchasable now, effect is a stub.',
+    effect: null, placeholder: true },
+  { id: 'M19', title: 'Sovereign Wealth Fund', line: 'C', tier: 7, cost: 0, prerequisites: ['M18'],
+    description: '[Not in game yet] A passive income system. 0RP until the system exists.',
+    effect: null, placeholder: true },
 ];
