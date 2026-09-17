@@ -16,6 +16,7 @@ export class Quest {
     this.delivered = {};
     this.rewardMoney = rewardMoney;
     this.rewardRP = rewardRP;
+    this.acceptWindow = acceptWindow;
     this.acceptTimer = acceptWindow;
     this.executionTimer = executionWindow;
     this.state = QUEST_STATE.OFFERED;

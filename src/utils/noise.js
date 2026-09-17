@@ -46,3 +46,19 @@ export class ValueNoise2D {
     return this._lerp(ix0, ix1, sy);
   }
 }
+
+export function fbm(noise, x, y, octaves = 4, persistence = 0.5) {
+  let total = 0;
+  let amplitude = 1;
+  let maxAmplitude = 0;
+  let frequency = 1;
+
+  for (let i = 0; i < octaves; i++) {
+    total += noise.sample(x * frequency, y * frequency) * amplitude;
+    maxAmplitude += amplitude;
+    amplitude *= persistence;
+    frequency *= 2;
+  }
+
+  return total / maxAmplitude;
+}

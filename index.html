@@ -6,7 +6,84 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<canvas id="game-canvas"></canvas>
+<div id="home-screen">
+  <div class="home-card">
+    <h1>Grid &amp; Asphalt</h1>
+    <p class="home-tagline">Logistika, tvornice, otoci. Postavi partiju i kreni.</p>
+
+    <div class="home-field">
+      <label for="seed-input">Seed</label>
+      <input type="number" id="seed-input" placeholder="random" />
+    </div>
+
+    <div class="home-field">
+      <label for="world-size-select">World size</label>
+      <select id="world-size-select">
+        <option value="120x80">120x80 (Legacy)</option>
+        <option value="200x200">200x200</option>
+        <option value="400x400">400x400</option>
+        <option value="800x800">800x800</option>
+        <option value="1600x1600">1600x1600</option>
+      </select>
+    </div>
+
+    <div class="home-field hidden" id="island-count-label">
+      <label for="island-count-input">Islands</label>
+      <input type="number" id="island-count-input" value="3" min="1" max="8" />
+    </div>
+
+    <div class="home-field">
+      <label for="port-count-input">Ports</label>
+      <input type="number" id="port-count-input" value="2" min="1" max="2" />
+    </div>
+
+    <button id="start-game-btn">Start</button>
+  </div>
+</div>
+
+<div id="game-root" class="hidden">
+  <canvas id="game-canvas"></canvas>
+
+  <div id="tab-bar">
+    <button id="tab-tech" class="tab-btn" data-tab="tech">Tech Tree</button>
+    <button id="tab-build" class="tab-btn" data-tab="build">Build</button>
+    <div id="build-panel-body" class="tab-body expand-wrap hidden"><div class="expand-inner"></div></div>
+    <button id="tab-vehicles" class="tab-btn" data-tab="vehicles">Vehicles</button>
+    <div id="vehicle-panel-body" class="tab-body expand-wrap hidden"><div class="expand-inner"></div></div>
+  </div>
+
+  <div id="hud"></div>
+
+  <div id="mobile-controls">
+    <button id="mobile-grid-btn" title="Toggle grid">Grid</button>
+    <button id="mobile-cancel-btn" title="Cancel">Cancel</button>
+  </div>
+
+  <div id="quests-region">
+    <div id="active-quests-panel"></div>
+    <button id="available-quests-btn">Quests</button>
+  </div>
+  <div id="available-quests-popup" class="hidden"></div>
+
+  <div id="time-region">
+    <div id="time-panel"></div>
+    <div id="minimap">Minimap</div>
+  </div>
+  <div id="minimap-overlay" class="hidden"></div>
+
+  <div id="event-ticker"></div>
+
+  <button id="mobile-menu-btn" title="Menu">⚙</button>
+
+  <div id="tooltip"></div>
+  <div id="tech-panel" class="hidden"></div>
+  <div id="pause-menu" class="hidden"></div>
+  <div id="settings-panel" class="hidden"></div>
+  <div id="recipe-panel" class="hidden"></div>
+  <div id="warehouse-menu" class="hidden"></div>
+  <div id="garage-menu" class="hidden"></div>
+</div>
+
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

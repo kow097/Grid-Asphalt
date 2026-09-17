@@ -1,0 +1,17 @@
+{
+  "width": 256,
+  "height": 256,
+  "parts": [
+    {
+      "id": "base",
+      "image": "extractor/base.png",
+      "anim": { "type": "static" }
+    },
+    {
+      "id": "rotor",
+      "image": "extractor/rotor.png",
+      "pivot": { "x": 128, "y": 138 },
+      "anim": { "type": "rotate", "speed": 180 }
+    }
+  ]
+}

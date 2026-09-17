@@ -1,12 +1,15 @@
 export class Processor {
-  constructor(id, recipe) {
+  constructor(id, recipe, kind) {
     this.id = id;
     this.recipe = recipe;
+    this.kind = kind;
     this.inputBuffer = {};
     this.outputBuffer = 0;
     this.maxOutputBuffer = 10;
     this.progress = 0;
     this.active = false;
+    this.requiresPower = true;
+    this.powered = true;
   }
 
   canStart() {
@@ -23,7 +26,9 @@ export class Processor {
     return accepted;
   }
 
-  update(deltaTime) {
+  update(deltaTime, speedMultiplier = 1) {
+    if (this.requiresPower && !this.powered) return;
+
     if (!this.active) {
       if (this.canStart() && this.outputBuffer < this.maxOutputBuffer) {
         for (const inp of this.recipe.inputs) this.inputBuffer[inp.type] -= inp.amount;
@@ -33,7 +38,7 @@ export class Processor {
       return;
     }
 
-    this.progress += deltaTime;
+    this.progress += deltaTime * speedMultiplier;
     if (this.progress >= this.recipe.processTime) {
       this.outputBuffer += this.recipe.outputAmount;
       this.active = false;

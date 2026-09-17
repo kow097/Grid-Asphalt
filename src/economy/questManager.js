@@ -1,5 +1,9 @@
 import { Quest, QUEST_STATE } from './quest.js';
 
+const RESOURCE_POOL = ['iron', 'copper', 'coal', 'stone', 'oil'];
+const SPAWN_INTERVAL = 20;
+const MAX_OFFERED_PER_PORT = 2;
+
 export class QuestManager {
   constructor(wallet, difficultyConfig) {
     this.wallet = wallet;
@@ -7,6 +11,29 @@ export class QuestManager {
     this.offeredQuests = [];
     this.activeQuests = [];
     this.researchPoints = 0;
+    this.spawnTimer = SPAWN_INTERVAL;
+    this.maxActiveQuests = 2;
+  }
+
+  trySpawnQuests(ports, deltaTime) {
+    this.spawnTimer += deltaTime;
+    if (this.spawnTimer < SPAWN_INTERVAL) return;
+    this.spawnTimer = 0;
+
+    for (const port of ports) {
+      const offeredForPort = this.offeredQuests.filter(q => q.portId === port.id).length;
+      if (offeredForPort >= MAX_OFFERED_PER_PORT) continue;
+
+      const type = RESOURCE_POOL[Math.floor(Math.random() * RESOURCE_POOL.length)];
+      const amount = 20 + Math.floor(Math.random() * 80);
+
+      this.offerQuest({
+        portId: port.id,
+        requirements: [{ type, amount }],
+        rewardMoney: amount * 3,
+        rewardRP: Math.ceil(amount / 10),
+      });
+    }
   }
 
   offerQuest(questParams) {
@@ -20,6 +47,7 @@ export class QuestManager {
   }
 
   acceptQuest(questId) {
+    if (this.activeQuests.length >= this.maxActiveQuests) return false;
     const quest = this.offeredQuests.find(q => q.id === questId);
     if (!quest || !quest.accept()) return false;
     this.offeredQuests = this.offeredQuests.filter(q => q.id !== questId);

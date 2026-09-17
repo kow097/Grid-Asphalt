@@ -9,16 +9,20 @@ const BASE_PRICES = {
   steel: 12,
   motor: 30,
   circuit: 25,
+  gear: 10,
+  wire: 10,
 };
 
 export class Market {
-  constructor(wallet) {
+  constructor(wallet, modifiers) {
     this.wallet = wallet;
+    this.modifiers = modifiers;
   }
 
   sell(type, amount) {
     const price = BASE_PRICES[type] || 0;
-    const revenue = price * amount;
+    const multiplier = this.modifiers?.marketPriceMultiplier ?? 1;
+    const revenue = price * amount * multiplier;
     this.wallet.add(revenue);
     return revenue;
   }

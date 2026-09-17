@@ -18,11 +18,17 @@ export class PathGrid {
   isWalkable(x, y) {
     if (!this.inBounds(x, y)) return false;
     const tile = this.tileAt(x, y);
-    return isWalkable(tile.terrain) && !tile.isOccupied();
+    // Dock/pristanisni tileovi (portDecoration) su vizualno cvrsta platforma
+    // preko vode - hodljivi su bez obzira sto im je terrain jos uvijek 'water'
+    // ispod (nikad se ne mijenja pri generaciji porta).
+    if (tile.portDecoration) return true;
+    return isWalkable(tile.terrain);
   }
 
   moveCost(x, y) {
-    const mult = speedMultiplier(this.tileAt(x, y).terrain);
+    const tile = this.tileAt(x, y);
+    if (tile.portDecoration) return 1;
+    const mult = speedMultiplier(tile.terrain);
     return mult === 0 ? Infinity : 1 / mult;
   }
 

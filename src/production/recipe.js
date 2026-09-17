@@ -26,4 +26,9 @@ export const RECIPES = {
     1,
     5
   ),
+  GEAR: new Recipe('gear', [{ type: 'iron_ingot', amount: 1 }], 'gear', 1, 3),
+  WIRE: new Recipe('wire', [{ type: 'copper_ingot', amount: 1 }], 'wire', 1, 3),
 };
+
+export const ASSEMBLER_RECIPES = [RECIPES.GEAR, RECIPES.WIRE];
+export const FACTORY_RECIPES = [RECIPES.STEEL, RECIPES.MOTOR, RECIPES.CIRCUIT];
