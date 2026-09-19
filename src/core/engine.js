@@ -7,6 +7,7 @@ import { Renderer } from '../rendering/renderer.js';
 import { IslandGenerator } from '../world/islandGenerator.js';
 import { PathGrid } from '../pathfinding/grid.js';
 import { Truck, TRUCK_STATE } from '../logistics/truck.js';
+import { TruckGroup } from '../logistics/truckGroup.js';
 import { ConveyorSegment } from '../logistics/conveyor.js';
 import { findPath } from '../pathfinding/astar.js';
 import { Wallet } from '../economy/currency.js';
@@ -14,13 +15,13 @@ import { QuestManager } from '../economy/questManager.js';
 import { Market } from '../economy/market.js';
 import { transferAdjacentOutputs, getOutputType, takeOutput, deliverToPort } from '../logistics/router.js';
 import { DIFFICULTY_MODES } from '../state/difficultyModes.js';
-import { GameState } from '../state/gameState.js';
+import { GameState, createDefaultModifiers } from '../state/gameState.js';
 import { AssetRegistry } from '../rendering/assetRegistry.js';
 import { allAssetKeys } from '../rendering/assetManifest.js';
 import { BuildController, BUILD_MODES, BUILD_COSTS } from '../ui/buildMenu.js';
 import { HUD } from '../ui/hud.js';
 import { Tooltip } from '../ui/tooltip.js';
-import { TechTree } from '../tech/techTree.js';
+import { TechTree, TABS } from '../tech/techTree.js';
 import { TechPanel } from '../ui/techPanel.js';
 import { TimePanel } from '../ui/timePanel.js';
 import { PauseMenu } from '../ui/pauseMenu.js';
@@ -36,6 +37,7 @@ import { Minimap } from '../ui/minimap.js';
 import { EventTicker } from '../ui/eventTicker.js';
 import { MobileControls } from '../ui/mobileControls.js';
 import { SettingsPanel } from '../ui/settingsPanel.js';
+import { DevPanel } from '../ui/devPanel.js';
 import { SaveLoadMenu } from '../ui/saveLoadMenu.js';
 import { applySaveData } from '../state/saveLoad.js';
 import { updatePowerNetworks } from '../power/powerNetwork.js';
@@ -83,6 +85,7 @@ export class Engine {
 
     this.truckIdCounter = 0;
     this.conveyorIdCounter = 0;
+    this.groupIdCounter = 0;
     // Pocetni kamion spawna na SREDINI otoka (prvog, ako ih ima vise) umjesto
     // na portu - kamera se centrira na njega isto tako.
     const spawnPos = this._findNearestWalkable(generator.islandCenters[0]);
@@ -95,6 +98,9 @@ export class Engine {
     this.pendingPreviewPaths = [];
     this.routeArmed = false;
     this.sellTruckArmed = false;
+    this.groupRouteArmed = null;
+    this._devUnlimitedPower = false;
+    this._devPreFreeBuildCost = null;
 
     this.buildController = new BuildController(this.state, this.techTree);
     this._wireBuildInput();
@@ -134,7 +140,20 @@ export class Engine {
 
     this.loop = new GameLoop(this._update.bind(this), this._render.bind(this));
     this.timePanel = new TimePanel(document.getElementById('time-panel'), this.loop);
-    this.settingsPanel = new SettingsPanel(document.getElementById('settings-panel'));
+    this.settingsPanel = new SettingsPanel(document.getElementById('settings-panel'), (enabled) => this._toggleDevTools(enabled));
+    this.devPanel = new DevPanel(document.getElementById('dev-panel'), this.state, questManager, this.techTree, {
+      setMoney: (v) => { this.state.wallet.balance = v; },
+      addMoney: (v) => { this.state.wallet.balance += v; },
+      setRP: (v) => { questManager.researchPoints = v; },
+      addRP: (v) => { questManager.researchPoints += v; },
+      unlockAllTech: () => this._devUnlockAllTech(),
+      resetTechTree: () => this._devResetTechTree(),
+      spawnFreeTruck: () => this._devSpawnFreeTruck(),
+      maxTruckUpgrades: () => this._devMaxTruckUpgrades(),
+      completeAllQuests: () => this._devCompleteAllQuests(),
+      toggleFreeBuilding: (enabled) => this._devToggleFreeBuilding(enabled),
+      toggleUnlimitedPower: (enabled) => { this._devUnlimitedPower = enabled; },
+    });
     this.saveLoadMenu = new SaveLoadMenu(document.getElementById('saveload-panel'), this);
     this.pauseMenu = new PauseMenu(
       document.getElementById('pause-menu'), this.loop, options.onExit ?? (() => {}),
@@ -143,7 +162,16 @@ export class Engine {
     );
     this.recipePanel = new RecipePanel(document.getElementById('recipe-panel'));
     this.warehouseMenu = new WarehouseMenu(document.getElementById('warehouse-menu'));
-    this.garageMenu = new GarageMenu(document.getElementById('garage-menu'));
+    this.garageMenu = new GarageMenu(document.getElementById('garage-menu'), this.state, {
+      onCreateGroup: (name) => this._createGroup(name),
+      onDeleteGroup: (groupId) => this._deleteGroup(groupId),
+      onToggleTruckInGroup: (groupId, truckId) => this._toggleTruckInGroup(groupId, truckId),
+      onArmGroupRoute: (group) => this._armGroupRoute(group),
+      onBuyTrailerUpgrade: () => this._buyTrailerUpgrade(),
+      onBuyEngineUpgrade: () => this._buyEngineUpgrade(),
+      trailerCost: (level) => this._upgradeCost(CONFIG.TRAILER_UPGRADE_BASE_COST, level),
+      engineCost: (level) => this._upgradeCost(CONFIG.ENGINE_UPGRADE_BASE_COST, level),
+    });
 
     // Cuvamo referencu (ne inline arrow) da destroy() moze stvarno ukloniti
     // TOCNO ovaj listener - vidi napomenu kod resize gore.
@@ -205,6 +233,11 @@ export class Engine {
       this.minimap.close();
     } else if (this.sellTruckArmed) {
       this.sellTruckArmed = false;
+    } else if (this.groupRouteArmed) {
+      this.groupRouteArmed = null;
+      this.routeArmed = false;
+      this.pendingWaypoints = [];
+      this.pendingPreviewPaths = [];
     } else if (this.buildController.mode) {
       this.buildController.setMode(null);
     } else if (this.selectedTruck) {
@@ -297,6 +330,152 @@ export class Engine {
     this._retarget(truck);
   }
 
+  _createGroup(name) {
+    const group = new TruckGroup(`group-${this.groupIdCounter++}`, name);
+    this.state.truckGroups.push(group);
+    return group;
+  }
+
+  _deleteGroup(groupId) {
+    const idx = this.state.truckGroups.findIndex((g) => g.id === groupId);
+    if (idx === -1) return;
+    this.state.truckGroups.splice(idx, 1);
+    for (const t of this.state.trucks) if (t.groupId === groupId) t.groupId = null;
+    if (this.groupRouteArmed?.id === groupId) this._cancelAction();
+  }
+
+  // Checkbox u Manage Groups - dodaje/mice jedan kamion iz grupe. Kamion
+  // moze biti u SAMO JEDNOJ grupi (checkiranje ga automatski izbaci iz
+  // stare). Novi clan ODMAH nasljedjuje rutu grupe ako ona postoji.
+  _toggleTruckInGroup(groupId, truckId) {
+    const truck = this.state.trucks.find((t) => t.id === truckId);
+    const group = this.state.truckGroups.find((g) => g.id === groupId);
+    if (!truck || !group) return;
+
+    if (truck.groupId === groupId) {
+      truck.groupId = null;
+      return;
+    }
+    truck.groupId = groupId;
+    if (group.route) this._assignMultiRoute(truck, group.route.waypoints);
+  }
+
+  _armGroupRoute(group) {
+    this.selectedTruck = null;
+    this.groupRouteArmed = group;
+    this.routeArmed = true;
+    this.pendingWaypoints = [];
+    this.pendingPreviewPaths = [];
+    this.garageMenu.close();
+  }
+
+  // Operating cost (OpenTTD-stil): kontinuiran odljev novca po kamionu,
+  // NEOVISNO o profitu - ne koristi wallet.spend() (koji odbija ako nema
+  // dovoljno) jer upkeep MORA proci, balance smije otici u minus.
+  _applyTruckUpkeep(deltaTime) {
+    if (this.state.trucks.length === 0) return;
+    const perSecond = (CONFIG.TRUCK_UPKEEP_PER_MINUTE / 60) * (this.state.modifiers.truckUpkeepMultiplier ?? 1);
+    this.state.wallet.balance -= this.state.trucks.length * perSecond * deltaTime;
+  }
+
+  // Faza B - custom nadogradnje kamiona (novcem, NE RP-om, za razliku od
+  // tech treeja). Retroaktivno vrijede samo za BUDUCE kupljene kamione,
+  // isti obrazac kao tech tree truckCapacityBonus/truckSpeedMultiplier
+  // efekti (ne diraju postojece state.trucks[].capacity).
+  _upgradeCost(baseCost, level) {
+    return Math.round(baseCost * Math.pow(CONFIG.TRUCK_UPGRADE_COST_GROWTH, level));
+  }
+
+  _buyTrailerUpgrade() {
+    const level = this.state.truckUpgrades.trailerLevel;
+    if (level >= CONFIG.TRUCK_UPGRADE_MAX_LEVEL) return;
+    const cost = this._upgradeCost(CONFIG.TRAILER_UPGRADE_BASE_COST, level);
+    if (!this.state.wallet.spend(cost)) return;
+    this.state.truckUpgrades.trailerLevel++;
+    this.state.modifiers.truckCapacityBonus += CONFIG.TRAILER_CAPACITY_PER_LEVEL;
+  }
+
+  _buyEngineUpgrade() {
+    const level = this.state.truckUpgrades.engineLevel;
+    if (level >= CONFIG.TRUCK_UPGRADE_MAX_LEVEL) return;
+    const cost = this._upgradeCost(CONFIG.ENGINE_UPGRADE_BASE_COST, level);
+    if (!this.state.wallet.spend(cost)) return;
+    this.state.truckUpgrades.engineLevel++;
+    this.state.modifiers.truckSpeedMultiplier *= (1 + CONFIG.ENGINE_SPEED_PER_LEVEL);
+  }
+
+  // --- Developer Tools (Settings > Developer Tools) --------------------
+
+  _toggleDevTools(enabled) {
+    if (enabled) this.devPanel.open();
+    else this.devPanel.close();
+  }
+
+  _devUnlockAllTech() {
+    for (const nodes of Object.values(TABS)) {
+      for (const node of nodes) {
+        if (!this.techTree.purchased.has(node.id)) {
+          this.techTree.purchased.add(node.id);
+          node.effect?.(this._techCtx);
+        }
+      }
+    }
+    this.techTree.progress.clear();
+    this.techTree.activeProjectId = null;
+  }
+
+  _devResetTechTree() {
+    this.techTree.purchased = new Set();
+    this.techTree.progress = new Map();
+    this.techTree.activeProjectId = null;
+    Object.assign(this.state.modifiers, createDefaultModifiers());
+    this.techTree.autoUnlockFreeRoots(this._techCtx);
+  }
+
+  _devSpawnFreeTruck() {
+    // Ako nema garaze, spawna na sredini otoka (isto kao pocetni demo kamion)
+    // - inace na prvoj garazi, kao normalna kupnja, ali bez placanja.
+    const capacity = 50 + this.state.modifiers.truckCapacityBonus;
+    let pos;
+    if (this.state.truckGarages.length > 0) {
+      pos = { x: this.state.truckGarages[0].x, y: this.state.truckGarages[0].y };
+    } else {
+      pos = this._findNearestWalkable({ x: Math.floor(this.state.world.width / 2), y: Math.floor(this.state.world.height / 2) });
+    }
+    const truck = new Truck(`truck-${this.truckIdCounter++}`, pos.x, pos.y, capacity);
+    this.state.trucks.push(truck);
+  }
+
+  _devMaxTruckUpgrades() {
+    while (this.state.truckUpgrades.trailerLevel < CONFIG.TRUCK_UPGRADE_MAX_LEVEL) {
+      this.state.truckUpgrades.trailerLevel++;
+      this.state.modifiers.truckCapacityBonus += CONFIG.TRAILER_CAPACITY_PER_LEVEL;
+    }
+    while (this.state.truckUpgrades.engineLevel < CONFIG.TRUCK_UPGRADE_MAX_LEVEL) {
+      this.state.truckUpgrades.engineLevel++;
+      this.state.modifiers.truckSpeedMultiplier *= (1 + CONFIG.ENGINE_SPEED_PER_LEVEL);
+    }
+  }
+
+  _devCompleteAllQuests() {
+    // Samo isporuci sve potrebne kolicine - QuestManager.update() (vec se
+    // zove svaki tick) sam prepoznaje isFulfilled() i dodijeli nagradu na
+    // SLJEDECEM ticku, isto kao kod normalne dostave kamionom.
+    for (const quest of this.state.questManager.activeQuests) {
+      for (const req of quest.requirements) quest.deliver(req.type, req.amount);
+    }
+  }
+
+  _devToggleFreeBuilding(enabled) {
+    if (enabled) {
+      this._devPreFreeBuildCost = this.state.modifiers.buildCostMultiplier;
+      this.state.modifiers.buildCostMultiplier = 0;
+    } else if (this._devPreFreeBuildCost !== null) {
+      this.state.modifiers.buildCostMultiplier = this._devPreFreeBuildCost;
+      this._devPreFreeBuildCost = null;
+    }
+  }
+
   // Build-mod odabir sad ide iskljucivo preko BuildPanel gumbova (tab "Build")
   // umjesto tipkovnickih precica - vidi HANDOFF/UI redizajn napomenu.
   _wireBuildInput() {
@@ -317,7 +496,7 @@ export class Engine {
         return;
       }
 
-      const clickedTruck = this._truckAt(worldPos.x, worldPos.y);
+      const clickedTruck = this.groupRouteArmed ? null : this._truckAt(worldPos.x, worldPos.y);
       if (clickedTruck) {
         this.selectedTruck = clickedTruck;
         this.pendingWaypoints = [];
@@ -327,7 +506,7 @@ export class Engine {
         return;
       }
 
-      if (!this.selectedTruck) {
+      if (!this.selectedTruck && !this.groupRouteArmed) {
         const { world } = this.state;
         if (gx >= 0 && gy >= 0 && gx < world.width && gy < world.height) {
           const tile = world.tiles[gy * world.width + gx];
@@ -350,16 +529,25 @@ export class Engine {
 
       if (!this.routeArmed) {
         this.selectedTruck = null;
+        this.groupRouteArmed = null;
         return;
       }
 
       this.pendingWaypoints.push([gx, gy]);
 
-      const prev = this.pendingWaypoints.length > 1
-        ? this.pendingWaypoints[this.pendingWaypoints.length - 2]
-        : [Math.floor(this.selectedTruck.position.x), Math.floor(this.selectedTruck.position.y)];
-      const leg = findPath(this.pathGrid, prev, [gx, gy]);
-      this.pendingPreviewPaths.push(leg);
+      // Za grupnu rutu nema jednog "od kud" (svaki kamion u grupi krece sa
+      // SVOJE pozicije kad se _assignMultiRoute stvarno pozove) - preview
+      // linija za prvi waypoint se onda jednostavno ne crta, samo waypoint-
+      // -na-waypoint segmenti od drugog nadalje.
+      if (this.pendingWaypoints.length > 1) {
+        const prev = this.pendingWaypoints[this.pendingWaypoints.length - 2];
+        const leg = findPath(this.pathGrid, prev, [gx, gy]);
+        this.pendingPreviewPaths.push(leg);
+      } else if (this.selectedTruck) {
+        const prev = [Math.floor(this.selectedTruck.position.x), Math.floor(this.selectedTruck.position.y)];
+        const leg = findPath(this.pathGrid, prev, [gx, gy]);
+        this.pendingPreviewPaths.push(leg);
+      }
     };
 
     this.input.isDragBuildMode = () =>
@@ -450,8 +638,19 @@ export class Engine {
   }
 
   _finishRoute() {
-    if (!this.selectedTruck || this.pendingWaypoints.length < 2) return;
-    this._assignMultiRoute(this.selectedTruck, this.pendingWaypoints);
+    if (this.pendingWaypoints.length < 2) return;
+    if (this.groupRouteArmed) {
+      const group = this.groupRouteArmed;
+      group.route = { waypoints: [...this.pendingWaypoints] };
+      for (const truck of this.state.trucks) {
+        if (truck.groupId === group.id) this._assignMultiRoute(truck, group.route.waypoints);
+      }
+      this.groupRouteArmed = null;
+    } else if (this.selectedTruck) {
+      this._assignMultiRoute(this.selectedTruck, this.pendingWaypoints);
+    } else {
+      return;
+    }
     this.pendingWaypoints = [];
     this.pendingPreviewPaths = [];
     this.routeArmed = false;
@@ -759,7 +958,13 @@ export class Engine {
       }
     }
     updatePowerNetworks(this.state);
+    if (this._devUnlimitedPower) {
+      for (const list of [this.state.extractors, this.state.smelters, this.state.factories, this.state.assemblers, this.state.conveyors]) {
+        for (const b of list) if (b.requiresPower) b.powered = true;
+      }
+    }
     this.techTree.update(this._techCtx);
+    this._applyTruckUpkeep(deltaTime);
     for (const extractor of this.state.extractors) extractor.update(deltaTime, modifiers.extractorSpeedMultiplier);
     for (const smelter of this.state.smelters) smelter.update(deltaTime, modifiers.processorSpeedMultiplier);
     for (const factory of this.state.factories) factory.update(deltaTime, modifiers.processorSpeedMultiplier);
@@ -776,6 +981,7 @@ export class Engine {
     this.availableQuestsPopup.update(deltaTime);
     this.eventTicker.update(deltaTime);
     this.techPanel.update(deltaTime);
+    this.devPanel.update(deltaTime);
   }
 
   _render() {
@@ -807,7 +1013,7 @@ export class Engine {
     );
     this.hud.update(this.state.wallet, this.state.questManager.researchPoints);
     this.buildPanel.refresh();
-    this.vehiclePanel.update(this.state.wallet.balance, this.sellTruckArmed, this.selectedTruck, this.routeArmed, this.pendingWaypoints, this.state.truckGarages.length > 0);
+    this.vehiclePanel.update(this.state.wallet.balance, this.sellTruckArmed, this.selectedTruck, this.routeArmed, this.pendingWaypoints, this.state.truckGarages.length > 0, this.groupRouteArmed);
     this.timePanel.update();
     this.tabBar.setTechActive(this.techPanel.visible);
   }

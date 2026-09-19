@@ -6,10 +6,12 @@ const SCALE_STEP = 0.05;
 export const DEFAULT_UI_SCALE = 1.15;
 
 export class SettingsPanel {
-  constructor(container) {
+  constructor(container, onToggleDevTools) {
     this.container = container;
     this.visible = false;
     this.scale = DEFAULT_UI_SCALE;
+    this.onToggleDevTools = onToggleDevTools ?? (() => {});
+    this.devToolsEnabled = false;
     this._applyScale();
   }
 
@@ -42,6 +44,12 @@ export class SettingsPanel {
             Allow direct conveyor&rarr;port sale
           </label>
         </div>
+        <div class="settings-row settings-row-toggle">
+          <label>
+            <input type="checkbox" id="settings-dev-tools" ${this.devToolsEnabled ? 'checked' : ''} />
+            Developer Tools
+          </label>
+        </div>
         <button id="settings-close-btn">Close</button>
       </div>
     `;
@@ -56,6 +64,11 @@ export class SettingsPanel {
 
     this.container.querySelector('#settings-direct-sale').addEventListener('change', (e) => {
       CONFIG.ALLOW_DIRECT_CONVEYOR_SALE = e.target.checked;
+    });
+
+    this.container.querySelector('#settings-dev-tools').addEventListener('change', (e) => {
+      this.devToolsEnabled = e.target.checked;
+      this.onToggleDevTools(this.devToolsEnabled);
     });
 
     this.container.querySelector('#settings-close-btn').addEventListener('click', () => this.close());

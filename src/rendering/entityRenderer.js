@@ -19,13 +19,21 @@ export function renderTrucks(ctx, camera, trucks, tileSize, assets) {
     const size = tileSize * camera.zoom * TRUCK_SIZE_RATIO;
 
     if (truckSprite) {
-      // Pretpostavka: truck.json je nacrtan okrenut UDESNO (istok) kao
-      // kanonska orijentacija - ako je nacrtan drugacije, promijeni ovdje
-      // koji se kut oduzima (vidi ROADMAP handoff).
+      // Pretpostavka: truck.png je nacrtan okrenut UDESNO (istok) kao
+      // kanonska orijentacija - kabina na DESNOJ strani slike, cargo na
+      // lijevoj. Canvas rotacija automatski okrece cijelu sliku prema
+      // smjeru voznje, pa NIJE potrebno vise sprite-ova za razne smjerove -
+      // jedan sprite dovoljan je za sve 4 (ili bilo koje) smjera.
+      // width odreduje sirinu (uvijek = size, kao tile-relativna skala),
+      // height se racuna iz stvarnog omjera PNG-a - izduljeni kamion
+      // (npr. 2:1) ostaje izduljen, ne stisce se u kvadrat.
+      const aspect = (truckSprite.height ?? truckSprite.width) / truckSprite.width;
+      const drawWidth = size;
+      const drawHeight = size * aspect;
       ctx.save();
       ctx.translate(screen.x, screen.y);
       ctx.rotate(Math.atan2(heading.dy, heading.dx));
-      truckSprite.draw(ctx, -size / 2, -size / 2, size);
+      truckSprite.draw(ctx, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
       ctx.restore();
     } else {
       ctx.fillStyle = truck.cargo ? '#e0a030' : '#cccccc';

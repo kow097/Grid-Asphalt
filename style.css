@@ -701,8 +701,7 @@ html, body {
 }
 
 .garage-menu-box h3 {
-  color: #ffee55;
-  margin: 0 0 6px;
+  color: #ffee55;  margin: 0 0 6px;
 }
 
 .garage-menu-box button {
@@ -725,6 +724,147 @@ html, body {
 
 .garage-menu-box #garage-menu-close {
   margin-top: 4px;
+  background: #555;
+}
+
+.garage-menu-box {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.garage-menu-hint {
+  font-size: 11px;
+  opacity: 0.75;
+  margin: 2px 0 6px;
+}
+
+.garage-menu-box input[type="text"] {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8e8e8;
+}
+
+.garage-group-row {
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+.garage-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.garage-group-header button {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.garage-truck-list {
+  margin-top: 6px;
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.garage-truck-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+#dev-panel {
+  position: fixed;
+  top: 60px;
+  right: 12px;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.dev-panel-box {
+  pointer-events: auto;
+  width: 280px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid #ff5555;
+  box-shadow: var(--glass-shadow);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #e8e8e8;
+}
+
+.dev-panel-box h3 {
+  color: #ff8080;
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.dev-section {
+  border-top: 1px solid var(--glass-border);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.dev-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.dev-section-title {
+  font-weight: bold;
+  opacity: 0.85;
+  margin-bottom: 4px;
+}
+
+.dev-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.dev-panel-box button {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: none;
+  background: #6a3a3a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.dev-panel-box input[type="number"] {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8e8e8;
+}
+
+.dev-panel-box > button {
+  width: 100%;
+  margin-top: 10px;
   background: #555;
 }
 

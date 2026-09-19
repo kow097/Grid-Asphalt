@@ -41,13 +41,14 @@ export class VehiclePanel {
     });
   }
 
-  update(walletBalance, sellArmed, selectedTruck, routeArmed, pendingWaypoints, hasGarage) {
+  update(walletBalance, sellArmed, selectedTruck, routeArmed, pendingWaypoints, hasGarage, groupRouteArmed) {
     this.buyBtn.disabled = walletBalance < this.cost || !hasGarage;
     this.buyBtn.textContent = hasGarage ? `Buy Truck ($${this.cost})` : 'Buy Truck (build a Garage first)';
     this.sellBtn.textContent = sellArmed ? 'Click a truck...' : `Sell Truck (+$${this.sellRefund})`;
     this.sellBtn.classList.toggle('armed', !!sellArmed);
 
-    if (!selectedTruck) {
+    const routeTargetLabel = groupRouteArmed ? `Group "${groupRouteArmed.name}"` : null;
+    if (!selectedTruck && !groupRouteArmed) {
       if (this._routeBtnState !== null) {
         this.routeSection.innerHTML = '';
         this._routeBtnState = null;
@@ -59,7 +60,10 @@ export class VehiclePanel {
     const n = pendingWaypoints?.length ?? 0;
     const canFinish = routeArmed && n >= 2;
     let label;
-    if (canFinish) label = `Finish Route (${n} points)`;
+    if (groupRouteArmed) {
+      label = canFinish ? `Finish Route for ${routeTargetLabel} (${n} points)`
+        : (n === 0 ? `${routeTargetLabel}: click point 1...` : `${routeTargetLabel}: click point ${n + 1}... (min 2)`);
+    } else if (canFinish) label = `Finish Route (${n} points)`;
     else if (routeArmed) label = n === 0 ? 'Click point 1...' : `Click point ${n + 1}... (min 2)`;
     else label = 'Create Route';
     const disabled = routeArmed && !canFinish;

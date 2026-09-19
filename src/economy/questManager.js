@@ -10,7 +10,9 @@ export class QuestManager {
     this.difficultyConfig = difficultyConfig;
     this.offeredQuests = [];
     this.activeQuests = [];
-    this.researchPoints = 0;
+    // Pocetni RP bonus - igrac krece s malim budzetom da odmah moze
+    // otkljucati poneki tier2 cvor bez cekanja na prvi quest.
+    this.researchPoints = 20;
     this.spawnTimer = SPAWN_INTERVAL;
     this.maxActiveQuests = 2;
   }

@@ -197,8 +197,24 @@ export class TechPanel {
         tooltip.classList.remove('hidden');
         const rect = icon.getBoundingClientRect();
         const panelRect = this.container.getBoundingClientRect();
-        tooltip.style.left = `${rect.left - panelRect.left + 20}px`;
-        tooltip.style.top = `${rect.top - panelRect.top}px`;
+        const tipRect = tooltip.getBoundingClientRect();
+
+        let left = rect.left - panelRect.left + 20;
+        let top = rect.top - panelRect.top;
+        // Ne dopusti da tooltip izleti izvan panela (dolje/desno) - ako bi
+        // preklopio rub, flipa se na drugu stranu ikonice umjesto da se
+        // reze/skriva izvan vidljivog podrucja.
+        if (rect.left + 20 + tipRect.width > panelRect.right) {
+          left = rect.left - panelRect.left - tipRect.width - 8;
+        }
+        if (rect.top + tipRect.height > panelRect.bottom) {
+          top = panelRect.height - tipRect.height - 12;
+        }
+        top = Math.max(4, top);
+        left = Math.max(4, left);
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
       };
       icon.addEventListener('mouseenter', show);
       icon.addEventListener('touchstart', (e) => { e.preventDefault(); show(); }, { passive: false });

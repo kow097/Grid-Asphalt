@@ -13,6 +13,7 @@ import { TruckGarage } from '../logistics/truckGarage.js';
 import { PowerPlant } from '../production/powerPlant.js';
 import { Battery } from '../logistics/battery.js';
 import { PowerPole } from '../logistics/powerPole.js';
+import { TruckGroup } from '../logistics/truckGroup.js';
 import { Truck } from '../logistics/truck.js';
 import { Vector2 } from '../utils/vector2.js';
 import { findPath } from '../pathfinding/astar.js';
@@ -157,6 +158,11 @@ export function buildSaveData(engine) {
     heading: t.heading, visualHeading: t.visualHeading,
     route: t.route ? { waypoints: t.route.waypoints } : null,
     routeLegIndex: t.routeLegIndex ?? null,
+    groupId: t.groupId ?? null,
+  }));
+
+  const truckGroups = state.truckGroups.map((g) => ({
+    id: g.id, name: g.name, route: g.route ? { waypoints: g.route.waypoints } : null,
   }));
 
   return {
@@ -189,6 +195,8 @@ export function buildSaveData(engine) {
     },
     camera: { x: camera.x, y: camera.y, zoom: camera.zoom },
     timeScale: loop.timeScale,
+    truckGroups,
+    truckUpgrades: { ...state.truckUpgrades },
     entities: {
       extractors,
       smelters: state.smelters.map(processorToJSON),
@@ -335,6 +343,13 @@ export function applySaveData(engine, save) {
     if (d.nextId) conveyorById.get(d.id).next = conveyorById.get(d.nextId) ?? null;
   }
 
+  state.truckGroups = (save.truckGroups ?? []).map((d) => {
+    const g = new TruckGroup(d.id, d.name);
+    g.route = d.route ? { waypoints: d.route.waypoints } : null;
+    return g;
+  });
+  if (save.truckUpgrades) Object.assign(state.truckUpgrades, save.truckUpgrades);
+
   state.trucks = save.entities.trucks.map((d) => {
     const t = new Truck(d.id, 0, 0, d.capacity);
     t.position = new Vector2(d.x, d.y);
@@ -345,6 +360,7 @@ export function applySaveData(engine, save) {
     t.manualControl = d.manualControl;
     t.heading = d.heading;
     t.visualHeading = d.visualHeading;
+    t.groupId = d.groupId ?? null;
     if (d.route) {
       const legs = [];
       for (let i = 0; i < d.route.waypoints.length; i++) {
@@ -393,6 +409,7 @@ export function applySaveData(engine, save) {
   );
   engine.conveyorIdCounter = 1 + maxNum(state.conveyors);
   engine.truckIdCounter = 1 + maxNum(state.trucks);
+  engine.groupIdCounter = 1 + maxNum(state.truckGroups);
 }
 
 // --- Pohrana (localStorage + datoteka) ---------------------------------------

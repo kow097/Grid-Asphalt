@@ -1,6 +1,7 @@
 import { Vector2 } from '../utils/vector2.js';
 import { findPath } from '../pathfinding/astar.js';
 import { speedMultiplier as terrainSpeedMultiplier } from '../world/terrain.js';
+import { cargoSpeedFactor } from './cargoMass.js';
 
 export const TRUCK_STATE = {
   IDLE: 'idle',
@@ -21,6 +22,9 @@ export class Truck {
     this.pathIndex = 0;
     this.state = TRUCK_STATE.IDLE;
     this.manualControl = false;
+    // Grupa kojoj kamion pripada (TruckGroup.id) ili null. Kad se doda u
+    // grupu koja vec ima rutu, odmah je nasljedjuje (vidi Engine).
+    this.groupId = null;
     // Smjer zadnjeg aktivnog pomaka (grid-osi vektor, npr {dx:1,dy:0}).
     // Ostaje postavljen i dok kamion miruje - koristi se za desnostranu
     // traku (lane offset) pri crtanju i za odlucivanje blokiraju li se
@@ -79,7 +83,7 @@ export class Truck {
     const distance = toTarget.length();
 
     const currentTile = grid.tileAt(Math.floor(this.position.x), Math.floor(this.position.y));
-    const speed = BASE_SPEED * terrainSpeedMultiplier(currentTile.terrain) * speedMultiplier;
+    const speed = BASE_SPEED * terrainSpeedMultiplier(currentTile.terrain) * speedMultiplier * cargoSpeedFactor(this.cargo, this.capacity);
     const step = speed * deltaTime;
 
     // Zaglađivanje vezano uz STVARNO PRIJEĐENU UDALJENOST (ne uz vrijeme) -
